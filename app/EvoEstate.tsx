@@ -57,6 +57,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { LocationCarousel } from "./components/LocationCarousel";
+import { MarketIntelligenceMap } from "./components/MarketIntelligenceMap";
+import { PropertyExplorerMap } from "./components/PropertyExplorerMap";
 
 export type PageKey =
   | "home"
@@ -102,15 +105,16 @@ type Property = {
   tag: string;
   status: string;
   agent: string;
+  coordinates: [number, number];
 };
 
 const properties: Property[] = [
-  { id: 1, title: "Villa Serein", area: "Palm District · Algiers", price: "DZD 148M", meta: "5 beds · 6 baths · 620 m²", image: "/villa-hero.jpg", tag: "Exclusive", status: "Available", agent: "Nadia Benali" },
-  { id: 2, title: "The Garden Residence", area: "Hydra · Algiers", price: "DZD 82M", meta: "4 beds · 3 baths · 310 m²", image: "/property-02.jpg", tag: "New", status: "Under offer", agent: "Yacine Haddad" },
-  { id: 3, title: "Cliff House 07", area: "Sidi Fredj · Algiers", price: "DZD 119M", meta: "4 beds · 5 baths · 480 m²", image: "/property-03.jpg", tag: "Sea view", status: "Available", agent: "Nadia Benali" },
-  { id: 4, title: "L’Orangerie Penthouse", area: "El Biar · Algiers", price: "DZD 64M", meta: "3 beds · 3 baths · 245 m²", image: "/property-04.jpg", tag: "Ready", status: "Reserved", agent: "Sami Khelifi" },
-  { id: 5, title: "Atelier Loft", area: "Oran Centre · Oran", price: "DZD 280K / mo", meta: "2 beds · 2 baths · 178 m²", image: "/property-05.jpg", tag: "For rent", status: "Available", agent: "Leila Merabet" },
-  { id: 6, title: "Nexus Business Tower", area: "Bab Ezzouar · Algiers", price: "Price on request", meta: "2,400 m² · Grade A · 42 parking", image: "/commercial.jpg", tag: "Commercial", status: "Available", agent: "Yacine Haddad" },
+  { id: 1, title: "Villa Serein", area: "Palm District · Algiers", price: "DZD 148M", meta: "5 beds · 6 baths · 620 m²", image: "/villa-hero.jpg", tag: "Exclusive", status: "Available", agent: "Nadia Benali", coordinates: [36.7532, 3.0414] },
+  { id: 2, title: "The Garden Residence", area: "Hydra · Algiers", price: "DZD 82M", meta: "4 beds · 3 baths · 310 m²", image: "/property-02.jpg", tag: "New", status: "Under offer", agent: "Yacine Haddad", coordinates: [36.7451, 3.0403] },
+  { id: 3, title: "Cliff House 07", area: "Sidi Fredj · Algiers", price: "DZD 119M", meta: "4 beds · 5 baths · 480 m²", image: "/property-03.jpg", tag: "Sea view", status: "Available", agent: "Nadia Benali", coordinates: [36.7599, 2.8419] },
+  { id: 4, title: "L’Orangerie Penthouse", area: "El Biar · Algiers", price: "DZD 64M", meta: "3 beds · 3 baths · 245 m²", image: "/property-04.jpg", tag: "Ready", status: "Reserved", agent: "Sami Khelifi", coordinates: [36.7694, 3.0282] },
+  { id: 5, title: "Atelier Loft", area: "Oran Centre · Oran", price: "DZD 280K / mo", meta: "2 beds · 2 baths · 178 m²", image: "/property-05.jpg", tag: "For rent", status: "Available", agent: "Leila Merabet", coordinates: [35.6969, -0.6331] },
+  { id: 6, title: "Nexus Business Tower", area: "Bab Ezzouar · Algiers", price: "Price on request", meta: "2,400 m² · Grade A · 42 parking", image: "/commercial.jpg", tag: "Commercial", status: "Available", agent: "Yacine Haddad", coordinates: [36.7176, 3.1862] },
 ];
 
 const publicNav = [
@@ -156,11 +160,24 @@ export default function EvoEstate({ pageKey = "home" }: { pageKey?: PageKey }) {
       if (event.key === "Escape") {
         setCommandOpen(false);
         setNotifications(false);
+        setMenu(false);
       }
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
   }, []);
+
+  useEffect(() => {
+    if (!menu) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
+    };
+  }, [menu]);
 
   if (authPages.has(pageKey)) {
     return <div className={`evo-app ${dark ? "dark" : ""}`}><AuthExperience pageKey={pageKey}/></div>;
@@ -178,7 +195,7 @@ export default function EvoEstate({ pageKey = "home" }: { pageKey?: PageKey }) {
 
   return (
     <div className={`evo-app public-root ${dark ? "dark" : ""}`}>
-      <PublicHeader menu={menu} setMenu={setMenu} dark={dark} setDark={setDark} onSearch={() => setCommandOpen(true)}/>
+      <PublicHeader menu={menu} setMenu={setMenu} dark={dark} setDark={setDark} onSearch={() => setCommandOpen(true)} overlay={pageKey === "home"}/>
       {pageKey === "home" && <HomePage/>}
       {["properties", "buy", "rent"].includes(pageKey) && <PropertiesExplorer mode={pageKey as "properties" | "buy" | "rent"}/>}
       {["luxury", "commercial", "projects", "agents", "about", "blog", "contact"].includes(pageKey) && <EditorialPage pageKey={pageKey}/>}
@@ -187,7 +204,7 @@ export default function EvoEstate({ pageKey = "home" }: { pageKey?: PageKey }) {
       {pageKey === "client-portal" && <ClientPortal/>}
       <PublicFooter/>
       {commandOpen && <CommandPalette publicMode onClose={() => setCommandOpen(false)}/>}
-      <Link className="floating-contact" href="/contact"><MessageCircle/><span>Talk to an advisor</span></Link>
+      <Link className="floating-contact" href="/contact"><MessageCircle size={20}/><span>Chat with us</span></Link>
     </div>
   );
 }
@@ -196,21 +213,45 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
   return <span className={`brand ${inverse ? "inverse" : ""}`}><i><Building2/></i><span><b>EVO</b><strong>ESTATE</strong></span></span>;
 }
 
-function PublicHeader({ menu, setMenu, dark, setDark, onSearch }: { menu: boolean; setMenu: (value: boolean) => void; dark: boolean; setDark: (value: boolean) => void; onSearch: () => void }) {
+function PublicHeader({ menu, setMenu, dark, setDark, onSearch, overlay = false }: { menu: boolean; setMenu: (value: boolean) => void; dark: boolean; setDark: (value: boolean) => void; onSearch: () => void; overlay?: boolean }) {
   return (
     <>
-      <div className="market-bar"><span><i/> Live market desk · 42 new opportunities this week</span><Link href="/valuation">Request a complimentary valuation <ArrowRight/></Link></div>
-      <header className="public-header">
+      <header className={`public-header ${overlay ? "transparent-header" : ""}`}>
         <Link href="/" className="brand-link"><Brand/></Link>
-        <nav className={menu ? "open" : ""}>{publicNav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}<Link href="/about">Company</Link></nav>
+        <nav className="public-desktop-nav">{publicNav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}<Link href="/about">Company</Link></nav>
         <div className="header-actions">
           <button className="icon-button desktop-search" onClick={onSearch} aria-label="Search"><Search/></button>
           <button className="icon-button" onClick={() => setDark(!dark)} aria-label="Toggle theme">{dark ? <Sun/> : <Moon/>}</button>
-          <Link className="portal-button" href="/login">Agency login</Link>
-          <Link className="primary-button" href="/book-visit">Book a visit</Link>
-          <button className="menu-toggle" onClick={() => setMenu(!menu)} aria-label="Open menu">{menu ? <X/> : <Menu/>}</button>
+          <Link className="header-login" href="/login"><UserRound size={15}/> Agency login</Link>
+          <Link className="primary-button header-book" href="/book-visit">Book a visit <ArrowRight size={16}/></Link>
+          <button className="menu-toggle" onClick={() => setMenu(true)} aria-label="Open menu" aria-expanded={menu} aria-controls="estate-mobile-navigation"><Menu/></button>
         </div>
       </header>
+      {menu && (
+        <div id="estate-mobile-navigation" className="estate-mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+          <header>
+            <Link href="/" className="brand-link" onClick={() => setMenu(false)}><Brand inverse/></Link>
+            <button autoFocus className="estate-menu-close" onClick={() => setMenu(false)} aria-label="Close menu"><X/></button>
+          </header>
+          <div className="estate-menu-content">
+            <p>Explore EvoEstate</p>
+            <nav aria-label="Mobile navigation">
+              {[...publicNav, ["Company", "/about"] as const].map(([label, href], index) => (
+                <Link href={href} key={href} onClick={() => setMenu(false)}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{label}</strong>
+                  <ArrowRight/>
+                </Link>
+              ))}
+            </nav>
+            <div className="estate-menu-actions">
+              <Link href="/login" onClick={() => setMenu(false)}><UserRound/> Agency login</Link>
+              <Link className="estate-menu-cta" href="/book-visit" onClick={() => setMenu(false)}>Book a visit <ArrowRight/></Link>
+            </div>
+            <footer><span>EVOESTATE · ALGIERS</span><a href="tel:+2135550100"><Phone/> +213 555 0100</a></footer>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -242,6 +283,8 @@ function HomePage() {
 
       <section className="proof-strip section-shell"><span>AS SEEN IN</span>{["MONOCLE", "ARCHITECTURAL DIGEST", "FORBES", "FINANCIAL TIMES", "DEZEEN"].map((item) => <b key={item}>{item}</b>)}</section>
 
+      <LocationCarousel/>
+
       <section className="featured-section section-shell">
         <SectionHeading eyebrow="CURATED FOR YOU" title={<>Properties with<br/><em>something to say.</em></>} text="A considered edit of exceptional places—each inspected, documented, and represented with complete clarity." action={<Link href="/properties">View all properties <ArrowRight/></Link>}/>
         <div className="property-grid">
@@ -259,7 +302,7 @@ function HomePage() {
       </section>
 
       <section className="intelligence-section section-shell">
-        <div className="market-visual"><span className="map-dot one"/><span className="map-dot two"/><span className="map-dot three"/><div className="map-card"><small>HYDRA · Q2 2026</small><b>+8.4%</b><span>annual price movement</span></div></div>
+        <MarketIntelligenceMap/>
         <div className="intelligence-copy"><span className="eyebrow"><i/> MARKET INTELLIGENCE</span><h2>Good decisions start<br/><em>with better context.</em></h2><p>Our advisors combine verified transaction data, live demand signals, and local judgement to help you understand not just the price—but the opportunity.</p><ul><li><Check/> Evidence-led pricing and negotiation</li><li><Check/> Neighbourhood demand and liquidity signals</li><li><Check/> Clear risk, ownership, and legal review</li></ul><Link className="primary-button large" href="/valuation">Understand my property’s value <ArrowRight/></Link></div>
       </section>
 
@@ -324,11 +367,7 @@ function PropertiesExplorer({ mode }: { mode: "properties" | "buy" | "rent" }) {
         <div className="explorer-results">
           {visible.map((property) => <PropertyCard property={property} key={property.id} saved={saved.includes(property.id)} onSave={() => setSaved((items) => items.includes(property.id) ? items.filter((id) => id !== property.id) : [...items, property.id])}/>)}
         </div>
-        <div className="property-map">
-          <span className="map-road r1"/><span className="map-road r2"/><span className="map-road r3"/>
-          {visible.slice(0, 5).map((property, index) => <button className={`price-pin pin-${index + 1}`} key={property.id}>{property.price.replace("DZD ", "")}</button>)}
-          <div className="map-location"><Compass/><span><b>Search this area</b><small>Move the map to refresh</small></span></div>
-        </div>
+        <PropertyExplorerMap properties={visible}/>
       </section>
     </main>
   );
@@ -477,7 +516,7 @@ function PublicFooter() {
   return (
     <footer className="public-footer">
       <div className="section-shell footer-grid">
-        <div><Brand inverse/><p>Property advisory, intelligently connected.</p><span><a href="#">in</a><a href="#">ig</a><a href="#">f</a></span></div>
+        <div><Brand inverse/><p>Property advisory, intelligently connected.</p><span><a href="#" aria-label="EvoEstate on LinkedIn">in</a><a href="#" aria-label="EvoEstate on Instagram">ig</a><a href="#" aria-label="EvoEstate on Facebook">f</a></span></div>
         <div><b>Discover</b>{publicNav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}</div>
         <div><b>Company</b><Link href="/about">About</Link><Link href="/agents">Advisors</Link><Link href="/blog">Journal</Link><Link href="/contact">Contact</Link></div>
         <div><b>Client services</b><Link href="/valuation">Property valuation</Link><Link href="/book-visit">Book a visit</Link><Link href="/client-portal">Client portal</Link><Link href="/login">Agency platform</Link></div>
@@ -721,4 +760,3 @@ function CommandPalette({ onClose, publicMode = false }: { onClose: () => void; 
 function NotificationPanel({ onClose }: { onClose: () => void }) {
   return <aside className="notification-panel"><header><div><h2>Notifications</h2><span>4 new</span></div><button onClick={onClose}><X/></button></header>{[["Offer opened","Sarah viewed the revised Villa Serein offer.","2 min",FileSignature],["Visit confirmed","Thomas confirmed Saturday at 11:00.","12 min",CalendarDays],["New lead assigned","Meriem requested a valuation in Dely Brahim.","24 min",Sparkles],["Signature complete","Sofia signed the reservation agreement.","1h",CheckCircle2]].map(([title,text,time,Icon])=>{const NIcon=Icon as typeof Bell;return <article key={String(title)}><span><NIcon/></span><div><b>{String(title)}</b><p>{String(text)}</p><small>{String(time)}</small></div></article>})}<button>View all activity</button></aside>;
 }
-
